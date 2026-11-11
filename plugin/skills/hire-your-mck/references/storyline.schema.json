@@ -20,9 +20,10 @@
       "enum": [
         "deck_detailed",
         "deck_flow",
+        "deck_deep",
         "single_slide"
       ],
-      "description": "deck_detailed: slides reach status filled. deck_flow: slides stop at ghost (data_requirements filled, no values). single_slide: exactly one content slide; storyline.exec_summary has one item."
+      "description": "deck_detailed: slides reach status filled. deck_flow: slides stop at ghost (data_requirements filled, no values). deck_deep: a 30–60 slide deck built with the seven-step process; slides reach filled, and the spec also carries problem and issue_tree, from which sections, lead slides and evidence codes are built. single_slide: exactly one content slide; storyline.exec_summary has one item."
     },
     "meta": {
       "$ref": "#/$defs/meta"
@@ -36,6 +37,17 @@
     },
     "storyline": {
       "$ref": "#/$defs/storyline"
+    },
+    "problem": {
+      "$ref": "#/$defs/problem"
+    },
+    "issue_tree": {
+      "type": "array",
+      "minItems": 3,
+      "description": "Steps 2–6 of the seven-step process (deck_deep). Level-1 nodes (no parent) become the sections; kept leaves become the lead slide's index and the evidence codes (T-01…T-04).",
+      "items": {
+        "$ref": "#/$defs/issue_node"
+      }
     },
     "sections": {
       "type": "array",
@@ -129,6 +141,15 @@
             "aptos"
           ],
           "description": "Overrides the theme's font pair. Omit to use the theme default (D10)."
+        },
+        "deck_type": {
+          "enum": [
+            "client_diagnostic",
+            "policy_analysis",
+            "research_report"
+          ],
+          "default": "client_diagnostic",
+          "description": "deck_deep preset chosen at checkpoint 1. client_diagnostic: summary + contents tracker, sizing, ends on how to make it happen, appendix 15–30%. policy_analysis: methodology and sensitivities up front, appendix up to 55%. research_report: key questions or a framework as the agenda, ends on key takeaways (L-03, L-04)."
         }
       }
     },
@@ -277,6 +298,22 @@
         "tracker_label": {
           "type": "string",
           "description": "Short label for the auto-generated tracker (S3)."
+        },
+        "tree_node": {
+          "$ref": "#/$defs/id",
+          "description": "deck_deep: the level-1 issue_tree node this section answers (T-01)."
+        },
+        "lead_slide": {
+          "$ref": "#/$defs/id",
+          "description": "deck_deep: the content slide right after the divider that states the section's answer and indexes its leaves (numbered-levers, framework or table; L-01)."
+        },
+        "parent_id": {
+          "$ref": "#/$defs/id",
+          "description": "Sub-section of this section (sections over ~20 pages, L-02). Shares its parent's exec_item_id."
+        },
+        "question": {
+          "type": "string",
+          "description": "deck_deep: the question this section answers, listed on the Key questions page (china27 form)."
         }
       }
     },
@@ -296,13 +333,15 @@
           "enum": [
             "cover",
             "exec_summary",
+            "problem_statement",
             "agenda_tracker",
             "section_divider",
             "content",
+            "appendix_divider",
             "backup",
             "end_page"
           ],
-          "description": "agenda_tracker: contents page; with section_id it is repeated before that section with the section emphasised. section_divider: section opener (needs section_id); lead_message.text overrides the section's exec summary claim."
+          "description": "agenda_tracker: contents page; with section_id it is repeated before that section with the section emphasised. section_divider: section opener (needs section_id); lead_message.text overrides the section's exec summary claim. problem_statement (deck_deep): 'Key questions', drawn from spec.problem and each section's question; not a content slide, so it needs no exec item. appendix_divider: opens the appendix and lists every backup page (R9); the agenda then ends with an Appendix row."
         },
         "section_id": {
           "$ref": "#/$defs/id"
@@ -313,7 +352,22 @@
         },
         "backup_of": {
           "$ref": "#/$defs/id",
-          "description": "For role backup: the content slide this supports. Title gets the 'BACKUP:' prefix (S4)."
+          "description": "For role backup: the content slide this supports. Title gets the 'BACKUP:' prefix (S4). deck_deep: the 'what we did not pursue' slide sets tree_node (the pruned nodes) instead."
+        },
+        "tree_node": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/id"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/id"
+              },
+              "minItems": 1
+            }
+          ],
+          "description": "deck_deep: the issue_tree leaf this evidence slide proves (its code is the title prefix, T-02). On the appendix 'what we did not pursue' slide: the pruned node(s) it lists."
         },
         "status": {
           "enum": [
@@ -467,8 +521,17 @@
             }
           },
           "then": {
-            "required": [
-              "backup_of"
+            "anyOf": [
+              {
+                "required": [
+                  "backup_of"
+                ]
+              },
+              {
+                "required": [
+                  "tree_node"
+                ]
+              }
             ]
           }
         },
@@ -618,7 +681,12 @@
         "cover",
         "agenda-tracker",
         "section-divider",
-        "end-page"
+        "end-page",
+        "marimekko",
+        "donut",
+        "landscape",
+        "from-to",
+        "venn"
       ],
       "description": "Tier 1 (20) first, then Tier 2, then navigation. See docs/archetypes/README.md."
     },
@@ -720,6 +788,20 @@
                   }
                 }
               }
+            },
+            "implication": {
+              "type": "string",
+              "maxLength": 160,
+              "description": "What the exhibit means for us, in its own box at the foot of the sidebar. Use it instead of a 'For us:' bullet."
+            },
+            "implication_style": {
+              "enum": [
+                "bar",
+                "alert",
+                "dark",
+                "rule"
+              ],
+              "description": "Leave it out: the renderer rotates dark box, rule, accent bar and circled '!' in deck order, so neighbouring slides differ. Set it only to force one look on a slide."
             }
           }
         }
@@ -814,6 +896,33 @@
         },
         {
           "$ref": "#/$defs/body_equation"
+        },
+        {
+          "$ref": "#/$defs/body_cost_curve"
+        },
+        {
+          "$ref": "#/$defs/body_org"
+        },
+        {
+          "$ref": "#/$defs/body_initiative"
+        },
+        {
+          "$ref": "#/$defs/body_map"
+        },
+        {
+          "$ref": "#/$defs/body_marimekko"
+        },
+        {
+          "$ref": "#/$defs/body_donut"
+        },
+        {
+          "$ref": "#/$defs/body_landscape"
+        },
+        {
+          "$ref": "#/$defs/body_from_to"
+        },
+        {
+          "$ref": "#/$defs/body_venn"
         }
       ]
     },
@@ -1027,9 +1136,16 @@
                   "type": "string"
                 },
                 "description": "What drives the number (filled) or what is missing (placeholder). 2–4 lines."
+              },
+              "drivers_header": {
+                "type": "string"
               }
             }
           }
+        },
+        "drivers_header": {
+          "type": "string",
+          "description": "Optional label over the driver lines ('Why it matters', 'Behind the number'). Without it a thin rule separates them; avoid the same label on every KPI slide."
         }
       }
     },
@@ -1872,6 +1988,75 @@
             "type": "string"
           },
           "description": "Every assumption behind an estimate, one per line. Listed in the Calculations sheet."
+        },
+        "geography": {
+          "type": "string",
+          "description": "Where the number applies (country, state, market), when the source covers more than one (V-02)."
+        },
+        "definition": {
+          "type": "string",
+          "description": "What exactly is counted when the label could mean more than one thing, e.g. 'nominal USD, calendar year, employer firms only' (V-02)."
+        },
+        "verified": {
+          "type": "object",
+          "required": [
+            "result"
+          ],
+          "additionalProperties": false,
+          "description": "Second-pass re-check (V-05): the page was opened again before rendering and the excerpt looked for. verify.py writes it; a verifier or the user may override it after reading the page.",
+          "properties": {
+            "result": {
+              "enum": [
+                "match",
+                "not_found",
+                "unreachable"
+              ]
+            },
+            "at": {
+              "type": "string",
+              "description": "Date of the re-check, YYYY-MM-DD."
+            },
+            "by": {
+              "enum": [
+                "verify.py",
+                "verifier",
+                "user"
+              ]
+            },
+            "note": {
+              "type": "string"
+            }
+          }
+        },
+        "corroboration": {
+          "type": "array",
+          "description": "Second independent sources for the same number (V-06): required for title and exec summary numbers in deck_deep. A value that differs needs a note saying which one is used and why.",
+          "items": {
+            "type": "object",
+            "required": [
+              "source_id",
+              "value",
+              "excerpt"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "source_id": {
+                "$ref": "#/$defs/id"
+              },
+              "value": {
+                "type": "number"
+              },
+              "excerpt": {
+                "type": "string"
+              },
+              "locator": {
+                "type": "string"
+              },
+              "note": {
+                "type": "string"
+              }
+            }
+          }
         }
       }
     },
@@ -1916,6 +2101,23 @@
         },
         "published": {
           "type": "string"
+        },
+        "tier": {
+          "enum": [
+            "T1",
+            "T2",
+            "T3",
+            "T4"
+          ],
+          "description": "Web sources (V-03). T1 primary: official statistics, regulators, filings, peer-reviewed papers, the company's own disclosures about itself. T2 established research firms, industry bodies, reputable surveys. T3 reporting on another source (news, summaries): trace to the primary. T4 not citable for numbers: blogs, vendor marketing about the market, SEO aggregators, AI-generated pages."
+        },
+        "cites": {
+          "type": "string",
+          "description": "T3 only: the primary source the report relies on, if it could not be reached."
+        },
+        "recency_ok": {
+          "type": "string",
+          "description": "Why a source published 4+ years ago still holds (V-04), e.g. 'latest edition; census runs every 5 years'."
         }
       }
     },
@@ -2019,6 +2221,1002 @@
           }
         }
       }
+    },
+    "problem": {
+      "type": "object",
+      "required": [
+        "statement",
+        "decision_maker",
+        "success_criteria",
+        "deadline",
+        "one_day_answer"
+      ],
+      "additionalProperties": false,
+      "description": "Step 1 problem definition worksheet and the step 4 one-day answer (P-01). Shown on the 'question we were asked' slide and used for the closing check.",
+      "properties": {
+        "statement": {
+          "type": "string",
+          "minLength": 10,
+          "description": "One sentence: outcome-focused, specific and measurable, time-bound, set at the highest level the decision maker owns. A question, not a topic."
+        },
+        "decision_maker": {
+          "type": "string",
+          "minLength": 2,
+          "description": "Who decides and what they will decide."
+        },
+        "success_criteria": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          },
+          "description": "How the decision maker will judge the answer (a number, a threshold, a yes/no)."
+        },
+        "deadline": {
+          "type": "string",
+          "minLength": 2,
+          "description": "When the decision is taken."
+        },
+        "accuracy": {
+          "type": "string",
+          "description": "Precision the decision needs ('order of magnitude', '±10%')."
+        },
+        "out_of_scope": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Boundaries and off-limits options agreed at checkpoint 1."
+        },
+        "one_day_answer": {
+          "type": "object",
+          "required": [
+            "situation",
+            "complication",
+            "resolution"
+          ],
+          "additionalProperties": false,
+          "description": "Best answer before the analysis, in exactly three parts (situation · observation/complication · resolution).",
+          "properties": {
+            "situation": {
+              "type": "string",
+              "minLength": 5
+            },
+            "complication": {
+              "type": "string",
+              "minLength": 5
+            },
+            "resolution": {
+              "type": "string",
+              "minLength": 5
+            }
+          }
+        }
+      }
+    },
+    "issue_node": {
+      "type": "object",
+      "required": [
+        "id",
+        "hypothesis"
+      ],
+      "additionalProperties": false,
+      "description": "One node of the hypothesis tree. A node without parent is a level-1 branch (= a section); a node no other node names as parent is a leaf.",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "code": {
+          "type": "string",
+          "pattern": "^[0-9]{1,2}[a-z]?[0-9]?$",
+          "description": "Index code: '2' for a branch, '2a' for its leaf. Evidence titles start with it ('2a:', T-02). Required on every kept node."
+        },
+        "parent": {
+          "$ref": "#/$defs/id"
+        },
+        "label": {
+          "type": "string",
+          "description": "Short name for trackers and the lead slide index ('Demand')."
+        },
+        "hypothesis": {
+          "type": "string",
+          "minLength": 10,
+          "description": "A testable sentence, not a label ('Mid-market firms will pay for AP automation within 2 years')."
+        },
+        "priority": {
+          "type": "object",
+          "required": [
+            "importance",
+            "influence"
+          ],
+          "additionalProperties": false,
+          "description": "Step 3: how much the answer depends on it × whether the decision maker can move it.",
+          "properties": {
+            "importance": {
+              "enum": [
+                "high",
+                "medium",
+                "low"
+              ]
+            },
+            "influence": {
+              "enum": [
+                "high",
+                "medium",
+                "low"
+              ]
+            }
+          }
+        },
+        "cut_reason": {
+          "type": "string",
+          "description": "Set when the branch is pruned. Pruned branches go to the appendix 'what we did not pursue' slide (T-02)."
+        },
+        "workplan": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Step 4: the analysis that would prove or kill the hypothesis.",
+          "properties": {
+            "analysis": {
+              "type": "string"
+            },
+            "exhibit": {
+              "type": "string",
+              "description": "Dummied chart: archetype or chart type and axes."
+            },
+            "sources": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Candidate data sources."
+            },
+            "knock_out": {
+              "type": "boolean",
+              "description": "An analysis that could end the branch on its own; run these first."
+            }
+          }
+        },
+        "finding": {
+          "type": "object",
+          "required": [
+            "verdict"
+          ],
+          "additionalProperties": false,
+          "description": "Step 5–6 result. refuted and revised leaves get new titles (T-04).",
+          "properties": {
+            "verdict": {
+              "enum": [
+                "confirmed",
+                "revised",
+                "refuted"
+              ]
+            },
+            "note": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "body_cost_curve": {
+      "type": "object",
+      "required": [
+        "kind",
+        "items",
+        "x_label",
+        "y_label"
+      ],
+      "additionalProperties": false,
+      "description": "Cost curve (archetype cost-curve): one bar per measure, width = volume, height = unit cost, sorted from cheapest; bars below zero save money. Drawn as shapes (native charts cannot vary bar width).",
+      "properties": {
+        "kind": {
+          "const": "cost_curve"
+        },
+        "items": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 40,
+          "items": {
+            "type": "object",
+            "required": [
+              "label",
+              "width",
+              "height"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "label": {
+                "type": "string"
+              },
+              "width": {
+                "$ref": "#/$defs/point"
+              },
+              "height": {
+                "$ref": "#/$defs/point"
+              },
+              "group": {
+                "type": "string",
+                "description": "Colour group, shown in the legend (max 4 groups)."
+              }
+            }
+          }
+        },
+        "x_label": {
+          "type": "string",
+          "description": "'**Metric**, unit', bottom right, e.g. '**Hours saved a month**, per customer, cumulative'."
+        },
+        "y_label": {
+          "type": "string",
+          "description": "'**Metric**, unit', top left, never rotated."
+        },
+        "price_line": {
+          "type": "object",
+          "required": [
+            "point",
+            "label"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "point": {
+              "$ref": "#/$defs/point"
+            },
+            "label": {
+              "type": "string"
+            }
+          },
+          "description": "Dashed horizontal line, e.g. a carbon price or the plan uplift."
+        },
+        "bracket": {
+          "type": "object",
+          "required": [
+            "from",
+            "to",
+            "point"
+          ],
+          "additionalProperties": false,
+          "description": "Brace over a run of bars with a pill value; must equal the title number (A-01).",
+          "properties": {
+            "from": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "point": {
+              "$ref": "#/$defs/point"
+            },
+            "label": {
+              "type": "string"
+            }
+          }
+        },
+        "tail": {
+          "type": "object",
+          "required": [
+            "label",
+            "width"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "type": "string"
+            },
+            "width": {
+              "$ref": "#/$defs/point"
+            }
+          },
+          "description": "Grey block closing the curve: volume with no measure yet ('TBD')."
+        },
+        "highlight": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Bars the title names; they get the accent colour."
+        }
+      }
+    },
+    "body_org": {
+      "type": "object",
+      "required": [
+        "kind",
+        "nodes"
+      ],
+      "additionalProperties": false,
+      "description": "Org chart (archetype org-chart): same-size boxes per level, elbow connectors, roles in callouts outside the boxes, new units filled dark with a legend.",
+      "properties": {
+        "kind": {
+          "const": "org"
+        },
+        "nodes": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 24,
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "label"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "label": {
+                "type": "string",
+                "description": "Unit or role name, 6 words at most."
+              },
+              "sub": {
+                "type": "string",
+                "description": "One short line under the label."
+              },
+              "parent": {
+                "$ref": "#/$defs/id"
+              },
+              "status": {
+                "enum": [
+                  "existing",
+                  "new",
+                  "changed"
+                ],
+                "default": "existing"
+              },
+              "count": {
+                "type": "integer",
+                "minimum": 2,
+                "maximum": 99,
+                "description": "Shown as stacked copies: one per region or team."
+              },
+              "dotted": {
+                "type": "boolean",
+                "description": "Dotted line to the parent (advisory or indirect)."
+              }
+            }
+          }
+        },
+        "side": {
+          "type": "array",
+          "maxItems": 2,
+          "items": {
+            "type": "object",
+            "required": [
+              "label",
+              "attach"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "label": {
+                "type": "string"
+              },
+              "sub": {
+                "type": "string"
+              },
+              "attach": {
+                "$ref": "#/$defs/id"
+              }
+            }
+          },
+          "description": "Committees outside the hierarchy, drawn as an oval beside the node they advise."
+        },
+        "roles": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "required": [
+              "node",
+              "bullets"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "node": {
+                "$ref": "#/$defs/id"
+              },
+              "header": {
+                "type": "string"
+              },
+              "bullets": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 5,
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "description": "'Key roles' callouts tied to a node; role text never goes inside the boxes."
+        }
+      }
+    },
+    "body_initiative": {
+      "type": "object",
+      "required": [
+        "kind",
+        "template"
+      ],
+      "additionalProperties": false,
+      "description": "Initiative one-pager (archetype initiative-one-pager). One template per deck; the title starts with the initiative's code.",
+      "properties": {
+        "kind": {
+          "const": "initiative"
+        },
+        "template": {
+          "enum": [
+            "actions_impact",
+            "description_case",
+            "pros_prereqs"
+          ]
+        },
+        "header": {
+          "type": "string",
+          "description": "actions_impact: the initiative's one-line aim, in the band under the title."
+        },
+        "rows": {
+          "type": "array",
+          "maxItems": 4,
+          "items": {
+            "type": "object",
+            "required": [
+              "label",
+              "actions"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "label": {
+                "type": "string"
+              },
+              "actions": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 4,
+                "items": {
+                  "type": "string"
+                }
+              },
+              "impact": {
+                "type": "object",
+                "required": [
+                  "text"
+                ],
+                "additionalProperties": false,
+                "description": "actions_impact: the row's expected result, shown in a right-hand column. Give a point when it is a number (it needs a data point like any other).",
+                "properties": {
+                  "point": {
+                    "$ref": "#/$defs/point"
+                  },
+                  "text": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "description": "actions_impact: label column + key actions."
+        },
+        "description": {
+          "type": "array",
+          "maxItems": 6,
+          "items": {
+            "type": "string"
+          },
+          "description": "description_case and pros_prereqs: what the initiative is."
+        },
+        "case": {
+          "type": "object",
+          "required": [
+            "name",
+            "bullets"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "bullets": {
+              "type": "array",
+              "maxItems": 6,
+              "items": {
+                "type": "string"
+              }
+            },
+            "impact": {
+              "type": "object",
+              "required": [
+                "point",
+                "caption"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "point": {
+                  "$ref": "#/$defs/point"
+                },
+                "caption": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "pros": {
+          "type": "array",
+          "maxItems": 4,
+          "items": {
+            "type": "string"
+          }
+        },
+        "cons": {
+          "type": "array",
+          "maxItems": 4,
+          "items": {
+            "type": "string"
+          }
+        },
+        "prerequisites": {
+          "type": "array",
+          "maxItems": 6,
+          "items": {
+            "type": "string"
+          }
+        },
+        "impact": {
+          "type": "object",
+          "required": [
+            "point",
+            "label"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "point": {
+              "$ref": "#/$defs/point"
+            },
+            "label": {
+              "type": "string"
+            }
+          },
+          "description": "Pulled-out impact pill (never buried in the text)."
+        },
+        "owner": {
+          "type": "string"
+        },
+        "timing": {
+          "type": "string"
+        },
+        "result_header": {
+          "type": "string",
+          "description": "Header of the result column (default 'Expected result')."
+        }
+      }
+    },
+    "body_map": {
+      "type": "object",
+      "required": [
+        "kind",
+        "geo",
+        "style"
+      ],
+      "additionalProperties": false,
+      "description": "Map (archetype map), drawn from Natural Earth outlines as editable shapes. World: Miller projection without Antarctica; US: Albers with Alaska and Hawaii insets.",
+      "properties": {
+        "kind": {
+          "const": "map"
+        },
+        "geo": {
+          "enum": [
+            "world",
+            "us_states"
+          ],
+          "description": "world: ISO 3166-1 alpha-3 codes. us_states: USPS codes (50 states and DC)."
+        },
+        "style": {
+          "enum": [
+            "choropleth",
+            "highlight",
+            "bubble"
+          ],
+          "description": "choropleth: regions shaded in 4–6 steps of one hue. highlight: a few regions in 1–3 accent groups on grey. bubble: circles at region centres, area proportional to value."
+        },
+        "extent": {
+          "enum": [
+            "auto",
+            "world",
+            "europe",
+            "americas",
+            "asia"
+          ],
+          "default": "auto",
+          "description": "auto: the whole geography. The others crop a world map."
+        },
+        "regions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "code"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "point": {
+                "$ref": "#/$defs/point"
+              }
+            }
+          },
+          "description": "choropleth and bubble: one entry per region with a value. A listed region without a value, or an unlisted one, is drawn as No data."
+        },
+        "breaks": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 5,
+          "items": {
+            "type": "number"
+          },
+          "description": "choropleth: class edges in the data's units (fractions for %), ascending; 3–5 edges give 4–6 classes. Omit to let the renderer pick round edges."
+        },
+        "legend_title": {
+          "type": "string"
+        },
+        "groups": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "required": [
+              "label",
+              "codes"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "label": {
+                "type": "string"
+              },
+              "codes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "description": "highlight: accent groups, shown in the legend."
+        },
+        "callouts": {
+          "type": "array",
+          "maxItems": 6,
+          "items": {
+            "type": "object",
+            "required": [
+              "code",
+              "header"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "header": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string"
+              },
+              "point": {
+                "$ref": "#/$defs/point"
+              },
+              "side": {
+                "enum": [
+                  "left",
+                  "right"
+                ]
+              }
+            }
+          },
+          "description": "Notes in aligned edge columns, joined to the region by an elbow leader line."
+        }
+      }
+    },
+    "body_marimekko": {
+      "type": "object",
+      "required": [
+        "kind",
+        "rows",
+        "columns"
+      ],
+      "additionalProperties": false,
+      "description": "Marimekko (archetype marimekko): variable-width 100% columns, no y axis; column width = its share, cells = shares within the column. Drawn as shapes. Pair it with a takeaway sidebar.",
+      "properties": {
+        "kind": {
+          "const": "marimekko"
+        },
+        "rows": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 6,
+          "items": {
+            "type": "string"
+          },
+          "description": "Row names, top to bottom, labelled once at the left (no legend)."
+        },
+        "columns": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "required": [
+              "label",
+              "width",
+              "cells"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "label": {
+                "type": "string"
+              },
+              "width": {
+                "$ref": "#/$defs/point"
+              },
+              "cells": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/point"
+                },
+                "description": "One point per row, in row order; shares of the column summing to 100%."
+              }
+            }
+          }
+        },
+        "width_label": {
+          "type": "string",
+          "description": "What the column widths measure, under the chart."
+        },
+        "highlight": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "column",
+              "row"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "column": {
+                "type": "string"
+              },
+              "row": {
+                "type": "string"
+              }
+            }
+          },
+          "description": "Cells outlined in the accent colour."
+        }
+      }
+    },
+    "body_donut": {
+      "type": "object",
+      "required": [
+        "kind",
+        "items"
+      ],
+      "additionalProperties": false,
+      "description": "Donuts (archetype donut): 1–4 equal-size rings, the share in accent from 12 o'clock clockwise, the rest grey, the value in the centre.",
+      "properties": {
+        "kind": {
+          "const": "donut"
+        },
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "items": {
+            "type": "object",
+            "required": [
+              "label",
+              "point"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "label": {
+                "type": "string"
+              },
+              "sub": {
+                "type": "string"
+              },
+              "point": {
+                "$ref": "#/$defs/point"
+              },
+              "emphasis": {
+                "type": "boolean",
+                "description": "Ring in the primary colour instead of the accent."
+              },
+              "detail": {
+                "type": "array",
+                "maxItems": 3,
+                "items": {
+                  "type": "string"
+                },
+                "description": "2–3 short lines under the donut: what drives the share."
+              }
+            }
+          }
+        }
+      }
+    },
+    "body_landscape": {
+      "type": "object",
+      "required": [
+        "kind",
+        "segments"
+      ],
+      "additionalProperties": false,
+      "description": "Landscape (archetype landscape): segments as equal columns of name chips (no logos).",
+      "properties": {
+        "kind": {
+          "const": "landscape"
+        },
+        "segments": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "required": [
+              "label",
+              "items"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "label": {
+                "type": "string"
+              },
+              "items": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 12,
+                "items": {
+                  "type": "string"
+                }
+              },
+              "note": {
+                "type": "string",
+                "description": "One bold line under the column: what the segment shows."
+              }
+            }
+          }
+        },
+        "marked": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Names outlined and bold (e.g. players that already ship the feature)."
+        },
+        "marked_label": {
+          "type": "string",
+          "description": "What the outline means, shown in the key."
+        },
+        "us": {
+          "type": "string",
+          "description": "Our company's name, filled in the accent colour."
+        },
+        "hedge": {
+          "type": "string",
+          "default": "Examples, not exhaustive"
+        }
+      }
+    },
+    "body_from_to": {
+      "type": "object",
+      "required": [
+        "kind",
+        "from_label",
+        "to_label",
+        "rows"
+      ],
+      "additionalProperties": false,
+      "description": "From–to shift (archetype from-to): two parallel columns, the To side stronger, one arrow between the headers.",
+      "properties": {
+        "kind": {
+          "const": "from_to"
+        },
+        "from_label": {
+          "type": "string"
+        },
+        "to_label": {
+          "type": "string"
+        },
+        "rows": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 7,
+          "items": {
+            "type": "object",
+            "required": [
+              "from",
+              "to"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "label": {
+                "type": "string",
+                "description": "Optional dimension name in a left column ('Data entry')."
+              },
+              "from": {
+                "type": "string"
+              },
+              "to": {
+                "type": "string"
+              },
+              "from_detail": {
+                "type": "string"
+              },
+              "to_detail": {
+                "type": "string",
+                "description": "One line under the To headline: how or why."
+              }
+            }
+          }
+        }
+      }
+    },
+    "body_venn": {
+      "type": "object",
+      "required": [
+        "kind",
+        "sets"
+      ],
+      "additionalProperties": false,
+      "description": "Venn (archetype venn): 2–3 translucent circles of one hue; the overlaps stay unlabelled except the centre, explained in a notes column.",
+      "properties": {
+        "kind": {
+          "const": "venn"
+        },
+        "sets": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 3,
+          "items": {
+            "type": "string"
+          }
+        },
+        "centre": {
+          "type": "string",
+          "description": "What sits where all sets meet; the notes column's header."
+        },
+        "notes": {
+          "type": "array",
+          "maxItems": 5,
+          "items": {
+            "type": "string"
+          }
+        }
+      }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "mode": {
+            "const": "deck_deep"
+          }
+        },
+        "required": [
+          "mode"
+        ]
+      },
+      "then": {
+        "required": [
+          "problem",
+          "issue_tree",
+          "sections"
+        ]
+      }
+    }
+  ]
 }

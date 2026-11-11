@@ -7,7 +7,7 @@ The spec is one JSON file (schema: `references/storyline.schema.json`, JSON Sche
 ```json
 {
   "spec_version": "0.1",
-  "mode": "deck_detailed | deck_flow | single_slide",
+  "mode": "deck_detailed | deck_flow | deck_deep | single_slide",
   "meta": {"title": "...", "subtitle": "...", "company_name": "...", "audience": "...", "purpose": "...",
            "date": "YYYY-MM-DD", "language": "en-US", "confidentiality": "...", "theme": "navy"},
   "inputs": [{"id": "in-1", "kind": "pasted_research", "label": "...", "content": "..."}],
@@ -23,6 +23,35 @@ The spec is one JSON file (schema: `references/storyline.schema.json`, JSON Sche
 - `next_steps[]`: `{action, owner, timing}`, 3–5 items. Shown on the end page.
 - `meta.theme`: `navy` (default), `crimson`, `forest`, `mono`, `vivid`, `slate`, `terracotta`. `meta.font_pair` overrides the theme's fonts (`georgia-arial` default, `aptos-serif-aptos`, `arial`, `calibri`, `aptos`).
 - Never put a firm's name in `company_name`; use the user's company.
+
+### Deep decks (`deck_deep`)
+
+`problem`, `issue_tree` and `sections` are required; `meta.deck_type` is `client_diagnostic` (default), `policy_analysis` or `research_report`.
+
+```json
+"problem": {"statement": "Should we launch a mid-market AP product by Q3 2027, and at what price?",
+            "decision_maker": "CEO and board", "success_criteria": ["Payback under 18 months"],
+            "deadline": "Board meeting, March 2027", "accuracy": "±20%", "out_of_scope": ["Enterprise tier"],
+            "one_day_answer": {"situation": "...", "complication": "...", "resolution": "..."}},
+"issue_tree": [
+  {"id": "n1", "code": "1", "label": "Demand", "hypothesis": "Mid-market firms will pay for AP automation within two years"},
+  {"id": "n1a", "code": "1a", "parent": "n1", "hypothesis": "Invoice volumes grow faster than finance headcount",
+   "priority": {"importance": "high", "influence": "medium"},
+   "workplan": {"analysis": "Invoice CAGR against headcount CAGR", "exhibit": "line-trend, two lines, 2019–25",
+                "sources": ["Census ABS"], "knock_out": true},
+   "finding": {"verdict": "confirmed", "note": "..."}},
+  {"id": "n5", "label": "Regulation", "hypothesis": "...", "cut_reason": "Timing is set by regulators, not by us"}
+],
+"sections": [{"id": "1", "title": "Demand", "exec_item_id": "1", "tree_node": "n1", "lead_slide": "L1"}]
+```
+
+- A node without `parent` is a level-1 branch (= one section). A node nobody names as parent is a leaf. `cut_reason` prunes the node and everything under it.
+- Evidence slides set `"tree_node": "n1a"`; the renderer writes the code ("1a:") before the title, so leave `prefix` out. Continuation pages of a long table add "(1/2)" to the title (R12). The lead slide (first content slide after the section's agenda) has no `tree_node`.
+- Each section gets a `question` (deck_deep): the Key questions page lists them under the problem statement.
+- Front matter: a `problem_statement` slide (`{"id": "q", "role": "problem_statement", "status": "filled"}`) shows the problem worksheet; it is not a content slide and belongs to no exec item.
+- The appendix opens with `{"id": "app", "role": "appendix_divider", "status": "filled"}` (any deck with backup slides and navigation); the agenda then ends with an Appendix row.
+- The appendix slide "What we did not pursue" is a `backup` with `"tree_node": ["n5"]` instead of `backup_of`.
+- Sections without `tree_node` are context or how to make it happen (last). Sub-sections set `parent_id` and share the parent's `exec_item_id`.
 
 ## Slides
 
@@ -85,7 +114,12 @@ Always give a placeholder a `label` that says what data is needed; it is shown t
 - Ranges: `"value": 4, "value_high": 5, "unit": "years"` → "4–5 years".
 - One number, one data point: reuse it on every slide that shows it; `slide_id` is the first slide.
 - Sources: `{"id", "kind": "user_provided | web | derived", "name", "publisher", "url", "accessed", "published", "input_id"}`. User material beats web (D2). `derived` = your own calculation; it must list `derived_from` and `formula`.
-- `excerpt` is verbatim from the source. It is what makes the source workbook trustworthy.
+- `excerpt` is verbatim from the source, and the value must appear in it (V-01): `"value": 1.2, "unit": "$B"` matches "$1.23 billion"; `0.047` with `%` matches "4.7 percent". If you computed the value from figures in the excerpt, it is a `derived` number with `calc`. User numbers carry an `excerpt` or at least a `locator` ("P&L export, Margin tab, row 14").
+- A number read from a spreadsheet or table cell gets an excerpt in this form, so `hire-your-mck verify` can find the row: the row labels in quotes, then the column and the cell as shown: `Q7 "did this business use AI in any of its business functions?", answer "Yes"; column 202524 = "17.3%"`.
+- `verified` is written by `hire-your-mck verify --write` (`{"result": "match", "at": "2026-11-10", "by": "verify.py"}`); set `"by": "verifier"` when you or an independent reviewer confirmed the page by reading it.
+- `corroboration` (deck_deep: every title and exec summary number): `[{"source_id": "s7", "value": 0.18, "excerpt": "...", "note": "BTOS used: larger sample"}]`. The second source is another publisher that does not cite the first; a value more than 2% off needs the note.
+- Web sources carry a `tier` (V-03): `T1` primary (official statistics, regulators, filings, peer-reviewed papers, a company about itself) · `T2` research firms, industry bodies, reputable surveys · `T3` reporting on another source: cite the primary instead, or name it in `"cites"` · `T4` never for numbers (blogs, vendor market claims, statistics aggregators, AI-generated pages). Give `published`; a source 4+ years old needs `"recency_ok": "<why it still holds>"` (V-04).
+- When a label could mean more than one thing, pin it down (V-02): `"geography": "US"`, `"definition": "employer firms only; share of firms, not of employees"`. A number in another currency becomes a derived number converted with a dated rate in `assumptions`.
 - **Calculated numbers carry `calc` (B-08):** a formula over data point ids with `+ - * /` and spaces around `-`, e.g. `"calc": "(pl1 - us1) * 100"`. `hire-your-mck check` recomputes it; the workbook turns it into a live Excel formula on the Calculations sheet.
 - **Estimates** (projections, sizings, uplifts) also carry `"estimate": true` and `"assumptions": ["...", "..."]`, and the slide that shows them must show their basis (next section).
 
@@ -176,8 +210,13 @@ Shows `next_steps` (action, owner, timing). Add `storyline.key_takeaways` only i
               "**Broker:** still large on legacy lanes, but lost share every period"],
   "rows": [{"label": "Digital share gain, 2021–25", "point": {"data_ref": "gain"}, "highlight": true}],
   "reasons": [{"header": "Largest prize", "detail": "...", "point": {...}}],
-  "note": "Next: confirm spend data before the steering committee"}}
+  "note": "Next: confirm spend data before the steering committee",
+  "implication": "Start with bank feeds and the close, then extend to invoicing in the same package"}}
 ```
+
+KPI items show their `drivers` under a thin rule; add `drivers_header` only when a label helps, and not the same one on every KPI slide.
+
+`implication` is what the exhibit means for a decision, drawn at the foot of the sidebar. Use it only when the slide leads to one (where to launch, what to build first, how to price); a slide that reports a finding ends on plain bullets. At most a third of sidebar slides carry one. The renderer rotates four looks in deck order (a dark "bottom-line" box as in the reference decks, a rule with accent text, a white panel with an accent bar, a circled "!") so neighbouring slides differ; set `implication_style` (`dark`, `rule`, `bar`, `alert`) only to force one look. Use it instead of a last bullet that starts "For us:".
 
 `rows` and `big_number` must be **derived from the exhibit** (B-05, B-06), but not as a plain sum or difference: use shares or expected impact. `hire-your-mck check` fails a repeat and warns on an unrelated number or a plain difference.
 
@@ -198,6 +237,19 @@ Shows `next_steps` (action, owner, timing). Add `storyline.key_takeaways` only i
 | B-06 unrelated sidebar number | warn |
 | S3 section divider without an existing section; quote citing an unknown source; scatter without x and y series; heatmap `low_is_better` naming no column | fail |
 | A-07 quote without `source_id` | warn |
+| V-01 web number without excerpt or not matching it; V-02 foreign-currency excerpt behind a `$` unit; V-03 web source without tier, number from a T4 source | fail |
+| V-06 second source missing from sources, the same source, or its value not in its excerpt | fail |
+| V-05 excerpt not found or page unreachable on re-check, web numbers not re-checked (`deck_deep`); V-06 dependent second source, values differ without a note, key numbers with one source (`deck_deep`) | warn |
+| V-01 excerpt with no figure, user numbers with neither excerpt nor locator; V-02 period not in the excerpt; V-03 T3 without `cites`, title or exec numbers on T3; V-04 source without `published` or 4+ years old | warn |
+| P-01 empty decision maker, success criteria, deadline or one-day answer part; T-01 level-1 branches outside 3–5 or not one section each; T-02 missing or duplicate code, prefix that is not its code, slide on a pruned node; T-03 leaf without an evidence slide; T-04 refuted or revised leaf still titled with its hypothesis; L-01 front matter over 4, section without divider or lead slide (`deck_deep`) | fail |
+| MK-01 marimekko column cells not matching the rows or not summing to 100%, highlight naming no cell; DN-01 donut value outside 0–100%; LS-01 marked or us name not in a segment; FT-01 from–to row with an empty side | fail |
+| LS-01 landscape outside 3–8 segments; VN-01 venn without centre or notes | warn |
+| MP-01 map region code not on the map; MP-02 breaks not ascending, choropleth or bubble map without values; MP-03 highlight map without groups; MP-04 bubble values negative or in mixed units | fail |
+| MP-03 more than 6 callouts on a map | warn |
+| CC-01 cost-curve bar with zero or negative width; CC-03 bracket naming a bar that does not exist; OC-01 org node with an unknown parent, a cycle, or roles pointing at no node; IO-03 one-pager missing its template's blocks | fail |
+| CC-02 more than 4 colour groups, mixed grouped and ungrouped bars, over 15 bars; OC-01 more than 6 boxes on a level; OC-02 box label over 6 words; IO-01 one-pager without a code; IO-02 one-pagers of one section in more than one template; IO-03 actions_impact without an impact pill | warn |
+| S3 full agenda straight before the first section tracker; L-03 backup without an appendix divider; A-09 one title shape on over a quarter of titles (", so" over a tenth) or three in a row; A-13 one archetype over 30% or tables over 40% of a 15+ slide deck | warn |
+| P-01 statement without time frame; T-01 label-like hypothesis; T-02 unscored or low leaf, pruned node not in the appendix; T-03 no workplan; T-04 no verdict; L-01 outside 30–60 slides; L-02 section over 20; L-03 appendix share or order; L-04 make it happen not last (`deck_deep`) | warn |
 | S3 navigation in a deck with fewer than 10 content slides; section dividers and agenda trackers mixed in one deck | warn |
 | A-12 sidebar value rows on more than a third of content slides or on two in a row; B-12 placeholders left in a full deck | warn |
 | A-12 density: thin slide, lone chart, thin sidebar, boxes < 3 bullets, KPI without drivers, one conclusion device > 40% or 3 in a row, table callout without row notes, end page without next steps | warn |

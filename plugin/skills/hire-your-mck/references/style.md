@@ -2,12 +2,16 @@
 
 The grammar follows 2020+ public McKinsey decks. Colors and fonts are our own (never a firm's).
 
+## Bullets
+
+One convention on every slide, drawn by the renderer: a bullet is an accent square (▪) with a **bold lead-in** when it has one, a sub-bullet is a muted dash (–), and bullets are spaced like the takeaway sidebar. Do not type bullet characters into the text.
+
 ## Titles (action titles)
 - A complete so-what sentence: subject, verb, judgment. Sentence case, no period.
 - 2 lines at 25 pt (about 21 words max; median 14). 22–25 words or 3 lines is a warning; over 25 words, rewrite.
 - One message. If you need "and" to join two different points, it is two slides; if it is two sides of one point, use two panels.
 - Numbers in the title must appear on the slide.
-- Connect successive titles so the titles alone read as a story ("As a result", "However").
+- Connect successive titles so the titles alone read as a story ("As a result", "However"), and vary their shape: one clause, implication-first with a colon, a dash, a leading "With …" phrase. Never default to "X, so Y" (A-09).
 
 Good: `Three levers close the $40M margin gap, and pricing delivers more than half of it`
 Bad: `Margin analysis` (a label) · `Margin is important.` (no judgment, period)

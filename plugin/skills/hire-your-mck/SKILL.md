@@ -1,6 +1,6 @@
 ---
 name: hire-your-mck
-description: Build consulting-style PowerPoint decks (McKinsey-style storyline, action titles, one message per slide) with editable native charts and a source workbook where every number is traced to its source. Use when the user asks for a strategy deck, board or steering-committee presentation, an executive summary deck, a storyline or "ghost deck", or a single consulting-style slide from research, notes, data or a key message.
+description: Build consulting-style PowerPoint decks (McKinsey-style storyline, action titles, one message per slide) with editable native charts and a source workbook where every number is traced to its source. Use when the user asks for a strategy deck, board or steering-committee presentation, an executive summary deck, a storyline or "ghost deck", a deep 30–60 slide deck that works a decision through as a problem (issue tree, hypotheses, seven-step problem solving), or a single consulting-style slide from research, notes, data or a key message.
 ---
 
 # Hire your McK
@@ -18,10 +18,11 @@ Everything runs through one file, the **storyline spec** (JSON). You write the s
 
 ```
 uvx hire-your-mck check spec.json           # QA; exit 1 on any fail
+uvx --with pymupdf hire-your-mck verify spec.json --write # re-open every web source, look for each excerpt (needs network)
 uvx hire-your-mck render spec.json --out <output dir> [--theme navy]
 ```
 
-`uvx` fetches the `hire-your-mck` package from PyPI on first run. Without `uv`: `pip install hire-your-mck`, then drop the `uvx`.
+`uvx` fetches the `hire-your-mck` package from PyPI on first run (`--with pymupdf` lets `verify` read PDF sources). Without `uv`: `pip install hire-your-mck pymupdf`, then drop the `uvx`.
 
 ## Read before you write the spec
 
@@ -31,44 +32,56 @@ uvx hire-your-mck render spec.json --out <output dir> [--theme navy]
 | `references/archetypes.md` | Choosing a slide type and filling its body |
 | `references/spec-guide.md` | Writing the JSON: fields, statuses, data points, sources, placeholders |
 | `references/style.md` | Titles, unit lines, density, conclusion devices, themes |
+| `references/deep-deck.md` | Only for `deck_deep`: the seven-step workflow that replaces Steps 1–2 |
 | `examples/*.json` | Complete specs that pass QA. Copy their shape |
 
-## The three modes
+## The four modes
 
 | Mode | Ask for | Slides end as |
 |---|---|---|
 | `deck_detailed` | Research, files or answers to a few questions | `filled`: every number sourced |
+| `deck_deep` | A decision to work through, plus research or files | 30–60 slides built with the seven-step process: problem, issue tree, sections, `filled` |
 | `deck_flow` | The landing message (plus any context) | `ghost`: real exhibit skeleton with "?" values, takeaway to prove, data needed |
 | `single_slide` | One lead message, or research for one slide | One `filled` slide |
 
 ## Workflow
 
-The skill stops and asks the user **only at three checkpoints**. Do everything else on your own.
+The skill stops and asks the user **only at three checkpoints** (four in `deck_deep`). Do everything else on your own.
 
 **How to ask, every time.** Ask as multiple choice, never as open questions the user has to type out. If your environment has a tool that shows questions with selectable options, use it; otherwise write numbered options. Each question gets 2–4 options written for this user's topic, your recommended option first and marked "(Recommended)", and the user can always type their own answer. Ask all the questions of one checkpoint in one go. The same applies to any assumption you need confirmed along the way (an age cutoff, a pilot city, a business model): each becomes one multiple-choice question with your recommendation first and the reason in a few words, e.g. "Age cutoff: 55+ (Recommended: matches SCSEP and AARP) · 65+ · 50+". Never end a message with open questions the user must type answers to. If you need facts only the user has (their numbers, their company), first offer options for *where* to get them (upload a file · paste it · search the web · leave as a placeholder) rather than asking them to type the facts.
 
 ### Checkpoint 1 · Brief (skip any question the first message already answers)
-Ask these together, as multiple choice:
-1. **What to build:** full deck with data (`deck_detailed`) · storyline only, slides with "?" values (`deck_flow`) · one slide (`single_slide`).
+Ask these together, as multiple choice, in this option order:
+1. **What to build:** full deck with data (`deck_detailed`) · deep deck, 30–60 slides worked through as a problem (`deck_deep`) · storyline only, slides with "?" values (`deck_flow`) · one slide (`single_slide`).
+   Mark one "(Recommended)" from what the first message shows, and keep the order above even when the recommended mode is not first (the one exception to "recommended first"):
+   - `deck_deep` when the request is a decision with several open questions behind it (enter a market, launch, invest, restructure), asks for depth or length ("deep", "30+ slides", "full diagnostic", "issue tree", "seven steps"), or is for a CEO, board or steering committee deciding on it.
+   - `deck_flow` when there is no material and the user wants the story first; `single_slide` when they name one slide; `deck_detailed` otherwise.
+   If the first message already names the mode ("deep deck", "ghost deck", "one slide"), do not ask this question.
 2. **Your material:** I have research or files to share (upload or paste next) · I already pasted it · no material: search the web · no material: leave data as placeholders.
 3. **Audience and decision:** 2–3 likely options for this topic (e.g. "CEO: approve or reject", "Board: update", "Team: align on a plan").
 4. **Look:** the themes in `references/style.md`, each with a 3–5 word description — `navy` (Recommended: deep navy, one blue accent) · `crimson` (charcoal, one red) · `forest` (deep green) · `mono` (black and white, prints well) · `vivid` (startup pitch, violet and coral) · `slate` (steel blue and amber) · `terracotta` (warm earth). If the tool caps options at four, show navy, mono, vivid and slate, and let the user type another.
 
 If the user chose "I have research", wait for it before Step 1.
 
+**If the mode is `deck_deep`, switch to `references/deep-deck.md` now.** It replaces Steps 1–2 with its own checkpoints, then returns to Step 3. Keep the answers already given here (material, audience, look); its Checkpoint 1 asks only the deep-deck questions. If the first message already asked for a deep deck, skip this checkpoint and start with that file's Checkpoint 1, which then also asks for material and look.
+
 ### Step 1 · Storyline
 1. Write the **governing thought**: one sentence that answers the decision the deck supports.
 2. Write the **executive summary**: 3–5 numbered bullets. Each bullet is a full so-what sentence and becomes one section. Read alone, the bullets must tell the whole story (B-04). It is the first page the reader sees, so it must fit at full size: governing thought ≤ 2 lines, each bullet ≤ 2 lines, each sub-point one line. `hire-your-mck render` warns when it only fits below 12 pt or does not fit; shorten, never accept that warning.
-3. For each bullet plan 1–3 content slides. Each slide has one **action title** (lead message): a complete judgment, 2 lines max, ideally ≤ 21 words, no period (B-01, A-03). The title gives the implication ("so it is our strongest profit lever"), not a readout of the chart (B-07). Exec sub-points are full sentences that read on their own: subject, metric, value, comparison (B-11). Write units the way `references/style.md` says: "percentage points", "4.5 times", "compared with" in sentences; "pp", "4.5x" only in labels.
+3. For each bullet plan 1–3 content slides. Each slide has one **action title** (lead message): a complete judgment, 2 lines max, ideally ≤ 21 words, no period (B-01, A-03). The title gives the implication, not a readout of the chart (B-07), in varied sentence shapes: never "X, so Y" on every slide (A-09). Exec sub-points are full sentences that read on their own: subject, metric, value, comparison (B-11). Write units the way `references/style.md` says: "percentage points", "4.5 times", "compared with" in sentences; "pp", "4.5x" only in labels.
 4. Route each title to an archetype with the routing table in `references/archetypes.md`.
-5. With 10+ content slides, plan navigation in one style for the whole deck: a `section_divider` before each section (default), or an `agenda_tracker` after the exec summary repeated with `section_id` before each section. Shorter decks get none; the exec summary is the contents.
+5. With 10+ content slides, plan navigation in one style for the whole deck: a `section_divider` before each section (default), or an `agenda_tracker` with `section_id` before each section. The exec summary already lists the sections, so do not put a full agenda between it and the first section tracker. Backup slides open with an `appendix_divider`. Shorter decks get none; the exec summary is the contents.
 
 ### Checkpoint 2 · Approve the storyline
 Show the executive summary with, under each bullet, the planned slide titles and their archetypes. Then ask, as multiple choice: Looks right, build it (Recommended) · Change the story or order · Add or drop slides · Change the audience or ask. This is the cheapest moment to change the story; do no data work before it.
 
 ### Step 2 · Data
 1. Use the user's files and pasted research first (D2). Then search the web for gaps.
-2. Every number on a slide becomes a `data_point` with `source_id`, `excerpt` (verbatim), `locator`, and for web sources `url` and `accessed`.
+2. Every number on a slide becomes a `data_point` with `source_id`, `excerpt` (verbatim), `locator`, and for web sources `url` and `accessed`. Verify as you collect (V-01–V-04 in `references/principles.md`):
+   - Copy the excerpt from the page you opened, never from memory or a search snippet; the value must appear in it.
+   - Tier every web source. Prefer T1 (statistics agencies, regulators, filings, papers) and T2. When a page reports someone else's number (T3), open the original and cite that. Never take a number from a T4 page (blogs, vendor market claims, statistics aggregators).
+   - Check the definition matches the label: currency, period, geography, population.
+   - Use the latest edition; a source 4+ years old needs a reason it still holds.
 3. Numbers you calculate (shares, gaps, CAGR, multiples) are `derived`: list `derived_from`, `formula` and a machine-readable `calc` (it becomes a live Excel formula).
    Projections, sizings and uplifts are **estimates**: add `"estimate": true` and every assumption in `assumptions`, and show the basis on the slide: a `basis` strip, an `equation` body, or a row `basis` (B-08). If the estimate needs its own explanation, give it its own `calculation-bridge` slide (B-03).
 4. Reuse one data point on every slide that shows the same number (its `slide_id` is the first slide).
@@ -96,6 +109,8 @@ Follow `references/spec-guide.md` and the examples. The rules that most often go
 
 ### Step 4 · QA, then fix
 Run `hire-your-mck check`. Fix every `FAIL`. Treat every `WARN` as something to fix unless you can say why it does not apply.
+
+Before rendering a deck with web sources, re-check them (V-05): run `hire-your-mck verify spec.json --write`, which opens every source again and records whether each excerpt is still there. If the script cannot reach the network (some sandboxes), open the pages with your own web fetch instead and set `verified` by hand (`"by": "verifier"`). For every `not_found`, open the page: re-quote the passage, correct the value, or replace the source. The workbook grades every number A/B/C/E from these results and C numbers get a footnote on their slide.
 
 Then judge what the script cannot check, slide by slide, and fix what fails:
 - B-01: cover the body; does the title alone give the slide's point?
